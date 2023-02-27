@@ -3,52 +3,66 @@ package com.company;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.*;
 
 public class Main {
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, ExecutionException {
         String[] texts = new String[25];
-        List<Thread> threads = new ArrayList<>();
+
         for (int i = 0; i < texts.length; i++) {
             texts[i] = generateText("aab", 30_000);
         }
 
-//        for (int x = 0; x < texts.length; x++) {
-
         long startTs = System.currentTimeMillis(); // start time
-        for (String text : texts) {
-            threads.add(new Thread(() -> {
+
+//        Создали лист из будущих решений
+        List<Future<String>> futureList = new ArrayList<>();
+
+//      создали пул из 25 потоков
+        final ExecutorService threadPool = Executors.newFixedThreadPool(25);
+
+//        для каждой строки массива texts создали задачу Callable
+        for (int i = 0; i < texts.length; i++) {
+            int finalI = i;
+            Callable<String> myCallable = () -> {
                 int maxSize = 0;
-                for (int i = 0; i < text.length(); i++) {
-                    for (int j = 0; j < text.length(); j++) {
-                        if (i >= j) {
+                for (int i1 = 0; i1 < texts[finalI].length(); i1++) {
+                    for (int j = 0; j < texts[finalI].length(); j++) {
+                        if (i1 >= j) {
                             continue;
                         }
                         boolean bFound = false;
-                        for (int k = i; k < j; k++) {
-                            if (text.charAt(k) == 'b') {
+                        for (int k = finalI; k < j; k++) {
+                            if (texts[finalI].charAt(k) == 'b') {
                                 bFound = true;
                                 break;
                             }
                         }
-                        if (!bFound && maxSize < j - i) {
-                            maxSize = j - i;
+                        if (!bFound && maxSize < j - i1) {
+                            maxSize = j - i1;
                         }
                     }
                 }
-                System.out.println(text.substring(0, 100) + " -> " + maxSize);
-            }));
-            threads.get(threads.size() - 1).start();
+                return (texts[finalI].substring(0, 100) + " -> " + maxSize);
+            };
+            futureList.add(threadPool.submit(myCallable));
         }
+
+        int maxValue = 0;
+        for (int i = 0; i < futureList.size(); i++) {
+            String result = futureList.get(i).get();
+            String[] str = result.split(" -> ");
+            int value = Integer.parseInt(str[1]);
+            if (maxValue < value) {
+                maxValue = value;
+                System.out.println("На итерации " + i + " наибольшее значение повторений буквы b составило " + value);
+            }
+        }
+        threadPool.shutdown();
+
         long endTs = System.currentTimeMillis(); // end time
         System.out.println("Time: " + (endTs - startTs) + "ms");
-
-//        }
-
-        for (Thread thread : threads) {
-            thread.join(); // зависаем, ждём когда поток объект которого лежит в thread завершится
-        }
-
     }
 
     public static String generateText(String letters, int length) {
