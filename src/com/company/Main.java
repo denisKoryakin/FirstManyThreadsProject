@@ -13,8 +13,6 @@ public class Main {
             texts[i] = generateText("aab", 30_000);
         }
 
-//        for (int x = 0; x < texts.length; x++) {
-
         long startTs = System.currentTimeMillis(); // start time
         for (String text : texts) {
             threads.add(new Thread(() -> {
@@ -40,14 +38,13 @@ public class Main {
             }));
             threads.get(threads.size() - 1).start();
         }
-        long endTs = System.currentTimeMillis(); // end time
-        System.out.println("Time: " + (endTs - startTs) + "ms");
-
-//        }
 
         for (Thread thread : threads) {
             thread.join(); // зависаем, ждём когда поток объект которого лежит в thread завершится
         }
+        
+        long endTs = System.currentTimeMillis(); // end time
+        System.out.println("Time: " + (endTs - startTs) + "ms");
 
     }
 
